@@ -3,12 +3,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 qt5_wrap_ui(UI_HEADERS ../../resources/ui/mainwindow.ui)
 
-include_directories (
-    ${SDL2_INCLUDE_DIR})
-
-link_libraries (
-    ${SDL2_LIBRARY})
-
 add_executable(launcher
 
     ../../resources/ui/mainwindow.ui
@@ -24,8 +18,7 @@ add_executable(launcher
     processinvoker.cpp
 )
 
-set_target_properties(launcher PROPERTIES COMPILE_FLAGS "${FA_COMPILER_FLAGS}")
+target_link_libraries(launcher SDL2::SDL2 Cel ${HUNTER_BOOST_LIBS} ${QT_LIB})
+target_include_directories(launcher PUBLIC ${QT_INCL})
 
-if(UNIX) # qt headers generate a bunch of warnings, just ignore em
-    set_target_properties(StormLib PROPERTIES COMPILE_FLAGS "-w")
-endif()
+set_target_properties(launcher PROPERTIES COMPILE_FLAGS "${FA_COMPILER_FLAGS}")

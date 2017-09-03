@@ -1,24 +1,67 @@
 cmake_minimum_required (VERSION 2.8.11)
 
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.19.91.tar.gz"
+    SHA1 "7202b636c3456b32a3b869f2aca5dee509c80111"
+    LOCAL
+)
+
 project (Freeablo)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-if(APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "/usr/local/lib/libtomcrypt.a")
-    set(FREETYPE_INCLUDE_DIRS "/usr/local/Cellar/freetype/2.5.3_1/include/freetype2")
+set(HUNTER_LIBS "")
+
+hunter_add_package(SDL2)
+find_Package(SDL2 CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} SDL2::SDL2)
+
+hunter_add_package(SDL_image)
+find_package(SDL_image CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} SDL_image::SDL_image)
+
+hunter_add_package(SDL_mixer)
+find_package(SDL_mixer CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} SDL_mixer::SDL_mixer)
+
+hunter_add_package(PNG)
+find_package(PNG CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} PNG::png)
+
+if(WIN32)
+    hunter_add_package(Qt)
+    find_package(Qt5Widgets CONFIG REQUIRED)
+    set(HUNTER_LIBS ${HUNTER_LIBS} Qt5::widgets)
+
+    set(QT_LIB Qt5::widgets)
+    set(QT_INCL "")
+else() # bug in hunter's qt package https://github.com/ruslo/hunter/issues/1012
+    find_package(Qt5Widgets REQUIRED)
+    find_package(Qt5Core REQUIRED)
+
+    set(QT_LIB ${Qt5Widgets_LIBRARIES})
+    set(QT_INCL ${Qt5Widgets_INCLUDE_DIRS})
 endif()
 
-Find_Package(SDL2 REQUIRED)
-Find_Package(SDL2_image REQUIRED)
-Find_Package(SDL2_mixer REQUIRED)
-Find_Package(ZLIB REQUIRED)
-find_package(PNG REQUIRED)
-Find_Package(OpenGL REQUIRED)
+hunter_add_package(enet)
+find_package(enet CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} enet::enet)
 
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5Core REQUIRED)
-find_package(Enet REQUIRED)
+hunter_add_package(ZLIB)
+find_package(ZLIB CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} ZLIB::zlib)
+
+hunter_add_package(stormlib)
+find_package(stormlib CONFIG REQUIRED)
+set(HUNTER_LIBS ${HUNTER_LIBS} stormlib::stormlib)
+
+hunter_add_package(Boost COMPONENTS filesystem serialization system program_options date_time regex)
+find_package(Boost CONFIG REQUIRED  filesystem serialization system program_options date_time regex)
+set(HUNTER_BOOST_LIBS Boost::filesystem Boost::serialization Boost::system Boost::program_options Boost::date_time Boost::regex)
+set(HUNTER_LIBS ${HUNTER_LIBS} ${HUNTER_BOOST_LIBS})
+
+Find_Package(OpenGL REQUIRED)
 
 if (Qt5_POSITION_INDEPENDENT_CODE)
     SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -26,25 +69,9 @@ endif()
 
 set(FA_COMPILER_FLAGS "")
 
-if(NOT WIN32)
-    Find_Package ( ZLIB REQUIRED )
-    Find_Package ( BZip2 REQUIRED )
-
-    if ( NOT ZLIB_FOUND )
-        message ( FATAL_ERROR "ZLIB not found!" )
-    endif ()
-    if ( NOT BZIP2_FOUND )
-        message ( FATAL_ERROR "BZip2 not found!" )
-    endif ()
-else()
+if(WIN32)
 	add_definitions(-DNOMINMAX) # http://stackoverflow.com/questions/5004858/stdmin-gives-error
 endif()
-
-find_package(Boost COMPONENTS filesystem serialization system program_options date_time regex REQUIRED)
-
-if ( NOT SDL2_FOUND )
-    message ( FATAL_ERROR "SDL2 not found!" )
-endif ()
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -81,20 +108,8 @@ if(MSVC)
     endif()
 endif()
 
-include_directories ( SYSTEM
-    ${Boost_INCLUDE_DIR}
-    ${SDL2_INCLUDE_DIR}
-    ${SDL2IMAGE_INCLUDE_DIR}
-    ${SDL2MIXER_INCLUDE_DIR}
-    ${OPENGL_INCLUDE_DIRS}
-    ${PNG_INCLUDE_DIR}
-    ${Qt5Widgets_INCLUDE_DIRS}
-    ${ENET_INCLUDE_DIR}
-    "${PROJECT_SOURCE_DIR}/extern/StormLib/src/"
-)
-
+#TODO: get rid of this?
 include_directories("${PROJECT_SOURCE_DIR}/components/")
-
 
 # allow the user to specify extra include dirs and defines on the command line
 if(CLI_INCLUDE_DIRS)
@@ -106,34 +121,8 @@ endif()
 
 
 add_subdirectory (extern)
-
-link_libraries(StormLib)
-
 add_subdirectory (components)
 
-link_libraries (
-    ${SDL2_LIBRARY}
-    ${SDL2IMAGE_LIBRARY}
-    ${SDL2MIXER_LIBRARY}
-    ${PNG_LIBRARY}
-    ${OPENGL_LIBRARIES}
-    ${Boost_LIBRARIES}
-    ${Qt5Widgets_LIBRARIES}
-    ${ENET_LIBRARY}
-    Cel
-    FAIO
-    Levels
-    Misc
-    Render
-    Input
-    DiabloExe
-    StormLib
-    Audio
-    Settings
-    StateMachine
-    Serial
-    nuklear
-)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
